@@ -99,6 +99,7 @@ public class PrestamoDAO {
         }
     }
 
+
     public boolean devolverPrestamo(int prestamoId) {
         String sql = "UPDATE prestamos SET fecha_devolucion = ? WHERE id = ?";
         try (Connection conn = ConexionDB.getConnection();
@@ -131,7 +132,10 @@ public class PrestamoDAO {
 
     public List<Prestamo> obtenerPrestamos() {
         List<Prestamo> prestamos = new ArrayList<>();
-        String sql = "SELECT * FROM prestamos";
+        String sql = "SELECT p.id, u.nombre AS usuario, l.titulo AS libro, p.fecha_prestamo, p.fecha_devolucion " +
+                     "FROM prestamos p " +
+                     "JOIN usuarios u ON p.usuario_id = u.id " +
+                     "JOIN libros l ON p.libro_id = l.id";
 
         try (Connection conn = ConexionDB.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -140,8 +144,8 @@ public class PrestamoDAO {
             while (rs.next()) {
                 Prestamo prestamo = new Prestamo(
                         rs.getInt("id"),
-                        rs.getInt("usuario_id"),
-                        rs.getInt("libro_id"),
+                        rs.getString("usuario"),
+                        rs.getString("libro"),
                         rs.getDate("fecha_prestamo"),
                         rs.getDate("fecha_devolucion")
                 );
@@ -152,4 +156,5 @@ public class PrestamoDAO {
         }
         return prestamos;
     }
+
 }

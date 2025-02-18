@@ -1,11 +1,18 @@
 package gui;
 
 import dao.PrestamoDAO;
+import dao.UsuarioDAO;
+import dao.LibroDAO;
 import modelo.Prestamo;
+import modelo.Usuario;
+import modelo.Libro;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -13,14 +20,18 @@ public class VentanaPrestamos extends JFrame {
     private JTable tablaPrestamos;
     private DefaultTableModel modeloTabla;
     private PrestamoDAO prestamoDAO;
+    private UsuarioDAO usuarioDAO;
+    private LibroDAO libroDAO;
 
     public VentanaPrestamos() {
         setTitle("Gestión de Préstamos");
-        setSize(600, 400);
+        setSize(700, 400);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
         prestamoDAO = new PrestamoDAO();
+        usuarioDAO = new UsuarioDAO(); // Instanciar usuarioDAO
+        libroDAO = new LibroDAO(); // Instanciar libroDAO
 
         // Panel principal
         JPanel panel = new JPanel();
@@ -29,8 +40,8 @@ public class VentanaPrestamos extends JFrame {
         // Modelo de la tabla
         modeloTabla = new DefaultTableModel();
         modeloTabla.addColumn("ID");
-        modeloTabla.addColumn("Usuario ID");
-        modeloTabla.addColumn("Libro ID");
+        modeloTabla.addColumn("Usuario");
+        modeloTabla.addColumn("Libro");
         modeloTabla.addColumn("Fecha Préstamo");
         modeloTabla.addColumn("Fecha Devolución");
 
@@ -61,35 +72,74 @@ public class VentanaPrestamos extends JFrame {
 
         add(panel);
         cargarPrestamos();
+        ajustarColumnas();
     }
 
     private void cargarPrestamos() {
-        modeloTabla.setRowCount(0); // Limpiar tabla
+        modeloTabla.setRowCount(0); // Limpiar la tabla antes de cargar los datos
         List<Prestamo> prestamos = prestamoDAO.obtenerPrestamos();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+
         for (Prestamo p : prestamos) {
-            modeloTabla.addRow(new Object[]{p.getId(), p.getUsuarioId(), p.getLibroId(), p.getFechaPrestamo(), p.getFechaDevolucion()});
+            String fechaPrestamo = dateFormat.format(p.getFechaPrestamo());
+            String fechaDevolucion = (p.getFechaDevolucion() != null) ? dateFormat.format(p.getFechaDevolucion()) : "Pendiente";
+
+            modeloTabla.addRow(new Object[]{
+                    p.getId(),
+                    p.getUsuarioNombre(),
+                    p.getLibroTitulo(),
+                    fechaPrestamo,
+                    fechaDevolucion
+            });
         }
+
+        tablaPrestamos.setDefaultRenderer(Object.class, new PrestamoTableRenderer());
+    }
+
+    private void ajustarColumnas() {
+        TableColumnModel columnModel = tablaPrestamos.getColumnModel();
+        columnModel.getColumn(0).setPreferredWidth(50);
+        columnModel.getColumn(1).setPreferredWidth(150);
+        columnModel.getColumn(2).setPreferredWidth(200);
+        columnModel.getColumn(3).setPreferredWidth(100);
+        columnModel.getColumn(4).setPreferredWidth(120);
+        tablaPrestamos.setRowHeight(25);
     }
 
     private void registrarPrestamo() {
-        String usuarioIdStr = JOptionPane.showInputDialog(this, "Ingrese el ID del usuario:");
-        String libroIdStr = JOptionPane.showInputDialog(this, "Ingrese el ID del libro:");
+        JComboBox<String> comboUsuarios = new JComboBox<>();
+        List<Usuario> usuarios = usuarioDAO.obtenerUsuarios();
+        for (Usuario u : usuarios) {
+            comboUsuarios.addItem(u.getId() + " - " + u.getNombre());
+        }
 
-        if (usuarioIdStr != null && libroIdStr != null) {
-            try {
-                int usuarioId = Integer.parseInt(usuarioIdStr);
-                int libroId = Integer.parseInt(libroIdStr);
-                Prestamo nuevoPrestamo = new Prestamo(0, usuarioId, libroId, new Date(), null);
+        JComboBox<String> comboLibros = new JComboBox<>();
+        List<Libro> libros = libroDAO.obtenerLibros();
+        for (Libro l : libros) {
+            comboLibros.addItem(l.getId() + " - " + l.getTitulo());
+        }
 
-                if (prestamoDAO.registrarPrestamo(nuevoPrestamo)) {
-                    JOptionPane.showMessageDialog(this, "✅ Préstamo registrado con éxito.");
-                } else {
-                    JOptionPane.showMessageDialog(this, "❌ No se pudo registrar el préstamo. Verifique las restricciones.");
-                }
-                cargarPrestamos();
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "❌ ID inválido. Debe ser un número.");
+        JPanel panel = new JPanel(new GridLayout(2, 2));
+        panel.add(new JLabel("Seleccione Usuario:"));
+        panel.add(comboUsuarios);
+        panel.add(new JLabel("Seleccione Libro:"));
+        panel.add(comboLibros);
+
+        int opcion = JOptionPane.showConfirmDialog(this, panel, "Registrar Préstamo", JOptionPane.OK_CANCEL_OPTION);
+        if (opcion == JOptionPane.OK_OPTION) {
+            String usuarioSeleccionado = (String) comboUsuarios.getSelectedItem();
+            int usuarioId = Integer.parseInt(usuarioSeleccionado.split(" - ")[0]);
+
+            String libroSeleccionado = (String) comboLibros.getSelectedItem();
+            int libroId = Integer.parseInt(libroSeleccionado.split(" - ")[0]);
+
+            Prestamo nuevoPrestamo = new Prestamo(usuarioId, libroId, new Date());
+            if (prestamoDAO.registrarPrestamo(nuevoPrestamo)) {
+                JOptionPane.showMessageDialog(this, "✅ Préstamo registrado con éxito.");
+            } else {
+                JOptionPane.showMessageDialog(this, "❌ No se pudo registrar el préstamo. Verifique las restricciones.");
             }
+            cargarPrestamos();
         }
     }
 
