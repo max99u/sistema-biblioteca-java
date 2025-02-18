@@ -9,13 +9,21 @@ public class Prestamo {
     private Date fechaPrestamo;
     private Date fechaDevolucion;
 
-    // Constructor
+    // Constructor con todos los atributos
     public Prestamo(int id, int usuarioId, int libroId, Date fechaPrestamo, Date fechaDevolucion) {
         this.id = id;
         this.usuarioId = usuarioId;
         this.libroId = libroId;
         this.fechaPrestamo = fechaPrestamo;
         this.fechaDevolucion = fechaDevolucion;
+    }
+
+    // Constructor sin ID y sin fecha de devolución (cuando se crea un préstamo nuevo)
+    public Prestamo(int usuarioId, int libroId, Date fechaPrestamo) {
+        this.usuarioId = usuarioId;
+        this.libroId = libroId;
+        this.fechaPrestamo = fechaPrestamo;
+        this.fechaDevolucion = null; // Se actualizará al devolver el libro
     }
 
     // Getters y Setters
