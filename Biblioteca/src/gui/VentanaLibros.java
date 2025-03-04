@@ -6,16 +6,20 @@ import modelo.Libro;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.List;
 
 public class VentanaLibros extends JFrame {
     private JTable tablaLibros;
     private DefaultTableModel modeloTabla;
     private LibroDAO libroDAO;
+    private JTextField txtBusqueda;
+    private JComboBox<String> comboCriterio;
 
     public VentanaLibros() {
         setTitle("Gestión de Libros");
-        setSize(600, 400);
+        setSize(700, 400);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -24,6 +28,24 @@ public class VentanaLibros extends JFrame {
         // Panel principal
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
+
+        // Panel de búsqueda
+        JPanel panelBusqueda = new JPanel();
+        panelBusqueda.setLayout(new FlowLayout());
+        panelBusqueda.add(new JLabel("Buscar por:"));
+        comboCriterio = new JComboBox<>(new String[]{"Título", "Autor", "Género"});
+        panelBusqueda.add(comboCriterio);
+        txtBusqueda = new JTextField(20);
+        panelBusqueda.add(txtBusqueda);
+
+        txtBusqueda.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                filtrarLibros();
+            }
+        });
+
+        panel.add(panelBusqueda, BorderLayout.NORTH);
 
         // Modelo de la tabla
         modeloTabla = new DefaultTableModel();
@@ -70,11 +92,40 @@ public class VentanaLibros extends JFrame {
         }
     }
 
+    private void filtrarLibros() {
+        String criterio = comboCriterio.getSelectedItem().toString();
+        String textoBusqueda = txtBusqueda.getText().trim().toLowerCase();
+        
+        System.out.println("🔍 Buscando: '" + textoBusqueda + "' en " + criterio); // Depuración
+
+        modeloTabla.setRowCount(0); // Limpia la tabla antes de actualizarla
+
+        List<Libro> libros = libroDAO.obtenerLibros(); // Obtiene todos los libros
+        for (Libro l : libros) {
+            String valorComparacion = "";
+
+            switch (criterio) {
+                case "Título" -> valorComparacion = l.getTitulo().toLowerCase();
+                case "Autor" -> valorComparacion = l.getAutor().toLowerCase();
+                case "Género" -> valorComparacion = l.getGenero().toLowerCase();
+            }
+
+            System.out.println("📖 Comparando con: " + valorComparacion); // Depuración
+
+            if (valorComparacion.contains(textoBusqueda)) { // Verifica si el texto buscado está en el valor
+                modeloTabla.addRow(new Object[]{
+                    l.getId(), l.getTitulo(), l.getAutor(), l.getGenero(), l.getEstado()
+                });
+            }
+        }
+    }
+
+
     private void agregarLibro() {
         String titulo = JOptionPane.showInputDialog(this, "Ingrese el título:");
         String autor = JOptionPane.showInputDialog(this, "Ingrese el autor:");
         String genero = JOptionPane.showInputDialog(this, "Ingrese el género:");
-        String estado = "DISPONIBLE"; // Los libros nuevos están disponibles
+        String estado = "DISPONIBLE";
 
         if (titulo != null && autor != null && genero != null) {
             Libro nuevoLibro = new Libro(0, titulo, autor, genero, estado);
